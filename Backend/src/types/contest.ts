@@ -17,6 +17,21 @@ export interface CodeforcesContest {
     relativeTimeSeconds?: number;
 }
 
+// LeetCode API response interface
+export interface LeetCodeResponse {
+    data: {
+        topTwoContests: LeetCodeContest[];
+    }
+}
+
+// Raw response structure from the LeetCode API
+export interface LeetCodeContest {
+    title: string;
+    titleSlug: string;
+    startTime: number;
+    duration: number;
+}
+
 // Standard format for frontend
 export interface Contest {
     id: string;
