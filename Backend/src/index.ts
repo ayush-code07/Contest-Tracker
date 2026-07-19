@@ -1,10 +1,11 @@
 // performing Type Annotation.
 // if we write normally like in js, then req and res were implicitly typed as any 
 // (or inferred by Express)
+import dotenv from 'dotenv';
+dotenv.config();
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import contestRoutes from "./routes/contestRoutes.js";
-import { METHODS } from 'node:http';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
