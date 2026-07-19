@@ -1,5 +1,5 @@
 import axios from "axios";
-import { CodeforcesResponse, LeetCodeResponse, Contest } from "../types/contest.js";
+import { CodeforcesResponse, LeetCodeResponse, CodeChefResponse, Contest, CodeforcesContest, CodeChefContest } from "../types/contest.js";
 import { promises } from "node:dns";
 import { start } from "node:repl";
 
@@ -7,6 +7,7 @@ export class ContestService {
     // by using STATIC here i can easily use this class in my controller file without creating any objects
     private static CF_API_URL = "https://codeforces.com/api/contest.list?gym=false";
     private static LC_API_URL = "https://leetcode.com/graphql/";
+    private static CC_API_URL = "https://www.codechef.com/api/list/contests/all?sort_by=START&sorting_order=asc&offset=0&limit=100"
 
     public static async fetchCodeforces(): Promise<Contest[]> {
         try {
@@ -109,13 +110,53 @@ export class ContestService {
         }
     }
 
+    public static async fetchCodechef(): Promise<Contest[]> {
+        try {
+            const response = await axios.get<CodeChefResponse>(this.CC_API_URL);
+
+            const data = response.data;
+
+            if (data.status === "error") {
+                throw new Error(`CodeChef API error: ${data.message || "Unknown error"}`);
+            }
+            const futureContests = data.future_contests || [];
+            const presentContests = data.present_contests || [];
+
+            const allContests = [...futureContests, ...presentContests];
+
+            const mapContest = (c: CodeChefContest, isOngoing: boolean): Contest => {
+                const durationMinutes = parseInt(c.contest_duration, 10) || 0;
+
+                return {
+                    id: `CodeChef-${c.contest_code}`,
+                    name: c.contest_name,
+                    url: `https:codechef.com/${c.contest_code}`,
+                    startTime: c.contest_start_date_iso,
+                    endTime: c.contest_end_date_iso,
+                    durationSeconds: durationMinutes * 60,
+                    site: "CodeChef",
+                    status: isOngoing ? 'ONGOING' : 'UPCOMING'
+                };
+            }
+
+            const mappedPresent = presentContests.map((c) => mapContest(c, true));
+            const mappedFuture = futureContests.map((c) => mapContest(c, false));
+
+            return [...mappedPresent, ...mappedFuture];
+        } catch (error) {
+            console.error("Error Fetching CodeChef Contests:", error);
+            return [];
+        }
+    }
+
     public static async fetchUpcomingContests(): Promise<Contest[]> {
-        const [cfContests, lcContests] = await Promise.all([
+        const [cfContests, lcContests, ccContests] = await Promise.all([
             this.fetchCodeforces(),
-            this.fetchLeetcode()
+            this.fetchLeetcode(),
+            this.fetchCodechef()
         ]);
 
-        const combined = [...cfContests, ...lcContests];
+        const combined = [...cfContests, ...lcContests, ...ccContests];
 
         combined.sort((a, b) =>
             new Date(a.startTime).getTime() - new Date(b.startTime).getTime()

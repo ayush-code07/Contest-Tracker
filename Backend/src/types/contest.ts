@@ -32,6 +32,25 @@ export interface LeetCodeContest {
     duration: number;
 }
 
+// CodeChef API response interface
+export interface CodeChefResponse {
+    status: string;
+    message: string;
+    present_contests: CodeChefContest[];
+    future_contests: CodeChefContest[];
+}
+
+export interface CodeChefContest {
+    contest_code: string;
+    contest_name: string;
+    contest_start_date: string;
+    contest_end_date: string;
+    contest_start_date_iso: string;
+    contest_end_date_iso: string;
+    contest_duration: string;
+    distinct_users: number;
+}
+
 // Standard format for frontend
 export interface Contest {
     id: string;
