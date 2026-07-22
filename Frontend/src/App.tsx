@@ -1,122 +1,99 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
+import { useState, useEffect } from 'react'
+import { ContestCard } from './components/contestCard'
+// when importing type, i should write type before interface in typescript
+import { Trophy, RotateCw } from 'lucide-react'
+import type { Contest, APIResponse } from './types/contest'
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [contests, setContests] = useState<Contest[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [siteFilter, setSiteFilter] = useState<string>("ALL");
+
+  const fetchContests = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch("http://localhost:3000/contests");
+      if (!response.ok) throw new Error("Failed to fetch contests");
+      const data: APIResponse = await response.json();
+      setContests(data.data || []);
+    } catch (error) {
+      setError(error.message || "Error connecting to backend");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // jb ui aayega pehle baar, tb yeh automatically fire hoga
+  useEffect(() => {
+    fetchContests();
+  }, []);
+
+  const filteredContests = contests.filter((c) => {
+    if (siteFilter === "ALL") return true;
+    return c.site.toLowerCase() === siteFilter.toLowerCase();
+  })
+
+
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans">
+      <div className="max-w-6xl mx-auto px-4 py-12">
+        <header className="flex flex-col items-center text-center mb-16">
+          <div>
+            <Trophy size={32} />
+          </div>
+          <h1 className="text-4xl tracking-tight mb-3">
+            Contest Tracker
+          </h1>
+        </header>
+
         <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+          {/* Site Filter Button */}
+          <div>
+            {["ALL", "CODEFORCES", "CODECHEF", "LEETCODE"].map((site) => (
+              <button key={site}
+                onClick={() => setSiteFilter(site)}
+                className={`px-4 py-2 rounded-lg ${siteFilter === site ? "bg-blue-600" : "bg-slate-700"}`}
+              >
+                {site}
+              </button>
+            ))}
+          </div>
 
-      <div className="ticks"></div>
+          {/* Loading state */}
+          {loading && (
+            <div>
+              <RotateCw size={24} className="animate-spin" />
+              <p>Loading contests...</p>
+            </div>
+          )}
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+          {/* Main Content */}
+          {!loading && !error && (
+            <>
+              {filteredContests.length > 0 ? (
+                <div className='grid'>
+                  {filteredContests.map((contest) => (
+                    <ContestCard key={contest.id} contest={contest} />
+                  ))}
+                </div>
+              ) : (
+                <div>
+                  <p>No ongoing or upcoming contests found for this platform.</p>
+                </div>
+              )}
+            </>
+          )}
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+        </div>
+        <h1>HELLO</h1>
+      </div>
+    </div>
   )
+
 }
 
 export default App
