@@ -25,7 +25,7 @@ const limiter = rateLimit({
 // app.use(cors());
 // use this instead
 const corsOptions = {
-    origin: 'https://localhost:5173', // only allow this domain
+    origin: 'http://localhost:5173', // only allow this domain
     methods: ['GET', 'POST'], // only allow these method
 }
 app.use(cors(corsOptions));
