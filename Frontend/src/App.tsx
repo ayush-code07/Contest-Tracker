@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { ContestCard } from './components/contestCard'
 // when importing type, i should write type before interface in typescript
-import { Trophy, RotateCw } from 'lucide-react'
+import { Trophy, RotateCw, RefreshCw } from 'lucide-react'
 import type { Contest, APIResponse } from './types/contest'
 import './App.css'
 
@@ -63,11 +63,20 @@ function App() {
             ))}
           </div>
 
+          {/* Refresh Button */}
+          <button
+            onClick={fetchContests}
+            className='flex gap-2 px-4 py-2 font-bold text-slate-300 hover:text-white rounded-xl'
+          >
+            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+            Refresh
+          </button>
+
           {/* Loading state */}
           {loading && (
-            <div>
+            <div className='flex flex-col items-center py-20 gap-3'>
               <RotateCw size={24} className="animate-spin" />
-              <p>Loading contests...</p>
+              <p className='text-sm font-medium'>Loading contests...</p>
             </div>
           )}
 
@@ -75,14 +84,14 @@ function App() {
           {!loading && !error && (
             <>
               {filteredContests.length > 0 ? (
-                <div className='grid'>
+                <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
                   {filteredContests.map((contest) => (
                     <ContestCard key={contest.id} contest={contest} />
                   ))}
                 </div>
               ) : (
-                <div>
-                  <p>No ongoing or upcoming contests found for this platform.</p>
+                <div className='text-center py-20 border rounded-xl'>
+                  <p className='text-slate-500 text-sm'>No ongoing or upcoming contests found for this platform.</p>
                 </div>
               )}
             </>
