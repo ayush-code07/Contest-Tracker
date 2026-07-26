@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Calendar, Clock } from "lucide-react";
 import type { Contest } from "../types/contest";
 
 interface ContestCardProps {
@@ -61,22 +62,44 @@ export const ContestCard: React.FC<ContestCardProps> = ({ contest }) => {
         }
     }
 
+    const durationHours = (contest.durationSeconds / 3600).toFixed(1);
+
     return (
         <div>
             <div>
-                <div>
-                    <span className={`${getSiteStyles(contest.site)}`}>
+                <div className="flex justify-between items-center mb-4">
+                    <span className={`px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded-full border ${getSiteStyles(contest.site)}`}>
                         {contest.site}
                     </span>
-                    <span className={`${getStatusStyles(contest.status)}`}>
+                    <span className={`px-2 py-0.5 text-xs font-medium uppercase rounded border ${getStatusStyles(contest.status)}`}>
                         {contest.status}
                     </span>
                 </div>
 
-                <h3>
+                <h3 className="text-lg font-bold text-slate-100 mb-3">
                     {contest.name}
                 </h3>
 
+                <div>
+                    <div>
+                        <Calendar size={16} className="text-slate-500" />
+                        <span>
+                            {
+                                new Date(contest.startTime).toLocaleString([], {
+                                    dateStyle: "medium",
+                                    timeStyle: "short"
+                                })
+                            }
+                        </span>
+                    </div>
+
+                    <div>
+                        <Clock size={16} className="text-slate-500" />
+                        <span>
+                            Duration: {durationHours}h
+                        </span>
+                    </div>
+                </div>
             </div>
 
             <div>
