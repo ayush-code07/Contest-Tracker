@@ -66,7 +66,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({ contest }) => {
     const durationHours = (contest.durationSeconds / 3600).toFixed(1);
 
     return (
-        <div className="flex flex-col justify-between p-6 bg-slate-900/40 backdrop-blur-xl border border-slate-800/85 rounded-2xl transition-all duration-300 hover:-translate-y-1 hover:border-slate-700/60 hover-shadow-2xl hover:shadow-indigo-500/5 group">
+        <div className="flex flex-col justify-between p-6 bg-slate-900/40 backdrop-blur-xl border border-slate-800/85 rounded-2xl transition-all duration-300 hover:-translate-y-1 hover:border-slate-700/60 hover:shadow-2xl hover:shadow-indigo-500/5 group">
             <div>
                 <div className="flex justify-between items-center mb-4">
                     <span className={`px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded-full border ${getSiteStyles(contest.site)}`}>
@@ -109,15 +109,16 @@ export const ContestCard: React.FC<ContestCardProps> = ({ contest }) => {
             </div>
 
             <div>
-                <div className={`py-2.5 px-4 rounded-xl text-center font-bold font-mono tracking-wide text-sm mb-3 border ${
-                    contest.status === 'ONGOING'
+                <div className={`py-2.5 px-4 rounded-xl text-center font-bold font-mono tracking-wide text-sm mb-3 border ${contest.status === 'ONGOING'
                         ? 'bg-emerald-500/5 text-emerald-300 border-emerald-500/10'
                         : 'bg-indigo-500/5 text-indigo-300 border-indigo-500/10'
-                }`}>
+                    }`}>
                     {timeLeft}
                 </div>
                 <a href={contest.url}
-                    className="flex items-center justify-center gap-2 w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-indigo-600/20 hover:shadow-indigo-600/35 hover:scale-[1.01]"    
+                    target="_blank" // this opens the link in the new tab in the browser
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-indigo-600/20 hover:shadow-indigo-600/35 hover:scale-[1.01]"
                 >
                     Register for Contest
                     <ExternalLink size={15} />
