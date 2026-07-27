@@ -117,7 +117,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({ contest }) => {
                 </div>
                 <a href={contest.url}
                     target="_blank" // this opens the link in the new tab in the browser
-                    rel="noopener noreferrer"
+                    rel="noopener noreferrer" // this is for security reasons
                     className="flex items-center justify-center gap-2 w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-indigo-600/20 hover:shadow-indigo-600/35 hover:scale-[1.01]"
                 >
                     Register for Contest
