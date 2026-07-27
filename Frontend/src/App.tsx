@@ -3,7 +3,6 @@ import { ContestCard } from './components/contestCard'
 // when importing type, i should write type before interface in typescript
 import { Trophy, RefreshCw } from 'lucide-react'
 import type { Contest, APIResponse } from './types/contest'
-import './App.css'
 
 function App() {
   const [contests, setContests] = useState<Contest[]>([]);
