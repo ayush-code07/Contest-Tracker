@@ -3,6 +3,8 @@ import { ContestCard } from './components/contestCard'
 // when importing type, i should write type before interface in typescript
 import { Trophy, RefreshCw } from 'lucide-react'
 import type { Contest, APIResponse } from './types/contest'
+// Vite access env variable using import.meta.env.VITE_VARNAME
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000"
 
 function App() {
   const [contests, setContests] = useState<Contest[]>([]);
@@ -14,7 +16,7 @@ function App() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("http://localhost:3000/contests");
+      const response = await fetch(`${API_URL}/contests`);
       if (!response.ok) throw new Error("Failed to fetch contests");
       const data: APIResponse = await response.json();
       setContests(data.data || []);
