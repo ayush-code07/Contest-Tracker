@@ -42,19 +42,20 @@ function App() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(99,102,241,0.15),rgba(255,255,255,0))] font-sans antialiased">
       {/* this antialiased forces macOS and iOS browsers to use grayscale font smoothing, ensuring all your text looks ultra-sharp, crisp, and clean against that dark Slate 950 background! */}
-      <div className="max-w-6xl mx-auto px-4 py-12">
-        {/* Header */}
-        <header className="flex flex-col items-center text-center mb-16">
-          <div className='inline-flex items-center justify-center p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl text-indigo-400 mb-4 shadow-inner'>
-            <Trophy size={32} />
+
+      {/* Navbar */}
+      <nav className="w-full border-b border-slate-800/60 bg-slate-950/80 backdrop-blur-md sticky top-0 z-50">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
+          <div className='inline-flex items-center justify-center p-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-indigo-400 shadow-inner'>
+            <Trophy size={22} />
           </div>
-          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight mb-3 bg-clip-text text-transparent bg-gradient-to-r from-indigo-200 via-indigo-400 to-violet-400">
+          <span className="text-xl font-extrabold tracking-tight bg-clip-text text-indigo-500/80">
             Contest Tracker
-          </h1>
-          <p className='text-slate-400 max-w-md text-sm sm:text-base leading-relaxed'>
-            Never miss another contest. Track and filter upcoming programming challenges in real-time.
-          </p>
-        </header>
+          </span>
+        </div>
+      </nav>
+
+      <div className="max-w-6xl mx-auto px-4 py-4">
 
         <div className='flex flex-col sm:flex-row gap-4 justify-between items-center mb-10 bg-slate-900/30 p-2 rounded-2xl border border-slate-800/50 backdrop-blur-md'>
           {/* Site Filter Button */}

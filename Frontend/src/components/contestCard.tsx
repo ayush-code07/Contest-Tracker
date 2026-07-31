@@ -16,10 +16,11 @@ export const ContestCard: React.FC<ContestCardProps> = ({ contest }) => {
             const end = new Date(contest.endTime).getTime();
             if (now < start) {
                 const diff = start - now;
-                const hours = Math.floor(diff / (1000 * 60 * 60));
+                const days = Math.floor((diff / (1000 * 60 * 60 * 24)));
+                const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
                 const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
                 const secs = Math.floor((diff % (1000 * 60)) / 1000);
-                setTimeLeft(`Starts in ${hours}h ${mins}m ${secs}s`);
+                setTimeLeft(`Starts in ${days}d ${hours}h ${mins}m ${secs}s`);
             } else if (now >= start && now <= end) {
                 const diff = end - now;
                 const hours = Math.floor(diff / (1000 * 60 * 60));
