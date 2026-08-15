@@ -11,6 +11,23 @@ function App() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [siteFilter, setSiteFilter] = useState<string>("ALL");
+  const [reminders, setReminders] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem("contest_reminders");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [notifiedContests, setNotifiedContests] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem("notified_contests");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
   const fetchContests = async () => {
     setLoading(true);
@@ -32,35 +49,98 @@ function App() {
     fetchContests();
   }, []);
 
+  const toggleReminder = async (contest: Contest) => {
+    if (!("Notification" in window)) {
+      alert("Your browser does not support web notifications.");
+      return;
+    }
+
+    if (Notification.permission !== "granted") {
+      const res = await Notification.requestPermission();
+      if (res !== "granted") {
+        alert("Please enable notification permissions in your browser to receive contest alerts.");
+        return;
+      }
+    }
+
+    setReminders((prev) => {
+      const updated = prev.includes(contest.id)
+        ? prev.filter((id) => id !== contest.id)
+        : [...prev, contest.id];
+      localStorage.setItem("contest_reminders", JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  // Background reminder checker (checks every 30s)
+  useEffect(() => {
+    const checkReminders = () => {
+      if (!("Notification" in window) || Notification.permission !== "granted") return;
+
+      const now = Date.now();
+      const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
+
+      contests.forEach((contest) => {
+        if (contest.status !== "UPCOMING") return;
+        if (!reminders.includes(contest.id)) return;
+        if (notifiedContests.includes(contest.id)) return;
+
+        const startTime = new Date(contest.startTime).getTime();
+        const timeUntilStart = startTime - now;
+
+        if (timeUntilStart > 0 && timeUntilStart <= FIFTEEN_MINUTES_MS) {
+          const notification = new Notification(`🏆 ${contest.site} Contest Starting Soon!`, {
+            body: `${contest.name} starts in less than 15 minutes! Click to view.`,
+            icon: "/logo.jpg"
+          });
+
+          notification.onclick = () => {
+            window.focus();
+            window.open(contest.url, "_blank");
+          };
+
+          setNotifiedContests((prev) => {
+            const updated = [...prev, contest.id];
+            localStorage.setItem("notified_contests", JSON.stringify(updated));
+            return updated;
+          });
+        }
+      });
+    };
+
+    checkReminders();
+    const interval = setInterval(checkReminders, 30000);
+    return () => clearInterval(interval);
+  }, [contests, reminders, notifiedContests]);
+
   const filteredContests = contests.filter((c) => {
+    if (siteFilter === "REMINDERS") return reminders.includes(c.id);
     if (siteFilter === "ALL") return true;
     return c.site.toLowerCase() === siteFilter.toLowerCase();
-  })
-
-
+  });
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(99,102,241,0.15),rgba(255,255,255,0))] font-sans antialiased">
-      {/* this antialiased forces macOS and iOS browsers to use grayscale font smoothing, ensuring all your text looks ultra-sharp, crisp, and clean against that dark Slate 950 background! */}
-
       {/* Navbar */}
       <nav className="w-full border-b border-slate-800/60 bg-slate-950/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
-          <div className='inline-flex items-center justify-center p-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-indigo-400 shadow-inner'>
-            <Trophy size={22} />
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className='inline-flex items-center justify-center p-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-indigo-400 shadow-inner'>
+              <Trophy size={22} />
+            </div>
+            <span className="text-xl font-extrabold tracking-tight bg-clip-text text-indigo-500/80">
+              Contest Tracker
+            </span>
           </div>
-          <span className="text-xl font-extrabold tracking-tight bg-clip-text text-indigo-500/80">
-            Contest Tracker
-          </span>
         </div>
       </nav>
 
       <div className="max-w-6xl mx-auto px-4 py-4">
 
         <div className='flex flex-col sm:flex-row gap-4 justify-between items-center mb-10 bg-slate-900/30 p-2 rounded-2xl border border-slate-800/50 backdrop-blur-md'>
-          {/* Site Filter Button */}
+          {/* Site & Reminder Filter Buttons */}
           <div className='flex flex-wrap gap-1'>
-            {["ALL", "CODEFORCES", "CODECHEF", "LEETCODE"].map((site) => (
+            {["ALL", "REMINDERS", "CODEFORCES", "CODECHEF", "LEETCODE"].map((site) => (
               <button key={site}
                 onClick={() => setSiteFilter(site)}
                 className={`px-4 py-2 text-xs font-semibold rounded-xl transition-all duration-200 cursor-pointer ${siteFilter === site
@@ -68,7 +148,7 @@ function App() {
                   : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/40"
                   }`}
               >
-                {site}
+                {site === "REMINDERS" ? `REMINDERS (${reminders.length})` : site}
               </button>
             ))}
           </div>
@@ -108,15 +188,23 @@ function App() {
         {!loading && !error && (
           <>
             {filteredContests.length > 0 ? (
-              // if we are not writing the grid-cols-1 without a prefix, then it will work according to phone, bcz tailwindcss styling is mobile-first
               <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
                 {filteredContests.map((contest) => (
-                  <ContestCard key={contest.id} contest={contest} />
+                  <ContestCard
+                    key={contest.id}
+                    contest={contest}
+                    isReminded={reminders.includes(contest.id)}
+                    onToggleReminder={toggleReminder}
+                  />
                 ))}
               </div>
             ) : (
               <div className='text-center py-20 border border-dashed border-slate-800 rounded-2xl'>
-                <p className='text-slate-500 text-sm'>No ongoing or upcoming contests found for this platform.</p>
+                <p className='text-slate-500 text-sm'>
+                  {siteFilter === "REMINDERS"
+                    ? "No contest reminders set yet. Click the bell icon on any upcoming contest card to turn on reminders!"
+                    : "No ongoing or upcoming contests found for this platform."}
+                </p>
               </div>
             )}
           </>
@@ -124,7 +212,6 @@ function App() {
       </div>
     </div>
   )
-
 }
 
 export default App
