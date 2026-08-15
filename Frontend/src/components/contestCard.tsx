@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { Calendar, Clock, ExternalLink } from "lucide-react";
+import { Calendar, Clock, ExternalLink, CalendarPlus, Bell, BellRing } from "lucide-react";
 import type { Contest } from "../types/contest";
 
 interface ContestCardProps {
     contest: Contest;
+    isReminded?: boolean;
+    onToggleReminder?: (contest: Contest) => void;
 }
 
-export const ContestCard: React.FC<ContestCardProps> = ({ contest }) => {
+export const ContestCard: React.FC<ContestCardProps> = ({ contest, isReminded = false, onToggleReminder }) => {
     const [timeLeft, setTimeLeft] = useState<string>("");
 
     useEffect(() => {
@@ -63,6 +65,24 @@ export const ContestCard: React.FC<ContestCardProps> = ({ contest }) => {
         }
     }
 
+    const getGoogleCalendarUrl = (contest: Contest): string => {
+        const formatToGCalISO = (dateStr: string): string => {
+            const date = new Date(dateStr);
+            return date.toISOString().replace(/-|:|\.\d\d\d/g, "");
+        };
+
+        const startTimeFormatted = formatToGCalISO(contest.startTime);
+        const endTimeFormatted = formatToGCalISO(contest.endTime);
+
+        const title = encodeURIComponent(`${contest.site}: ${contest.name}`);
+        const details = encodeURIComponent(
+            `Competitive Programming Contest on ${contest.site}\n\nDirect Link: ${contest.url}`
+        );
+        const location = encodeURIComponent(contest.url);
+
+        return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startTimeFormatted}/${endTimeFormatted}&details=${details}&location=${location}`;
+    };
+
     // this conver the contest duratino in hours and the toFixed(1) allows only one no. after decimal point
     const durationHours = (contest.durationSeconds / 3600).toFixed(1);
 
@@ -116,14 +136,37 @@ export const ContestCard: React.FC<ContestCardProps> = ({ contest }) => {
                     }`}>
                     {timeLeft}
                 </div>
-                <a href={contest.url}
-                    target="_blank" // this opens the link in the new tab in the browser
-                    rel="noopener noreferrer" // this is for security reasons
-                    className="flex items-center justify-center gap-2 w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-indigo-600/20 hover:shadow-indigo-600/35 hover:scale-[1.01]"
-                >
-                    Register for Contest
-                    <ExternalLink size={15} />
-                </a>
+                <div className="flex gap-2">
+                    <a href={contest.url}
+                        target="_blank" // this opens the link in the new tab in the browser
+                        rel="noopener noreferrer" // this is for security reasons
+                        className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-indigo-600/20 hover:shadow-indigo-600/35 hover:scale-[1.01]"
+                    >
+                        Register
+                        <ExternalLink size={15} />
+                    </a>
+                    {onToggleReminder && contest.status === 'UPCOMING' && (
+                        <button
+                            onClick={() => onToggleReminder(contest)}
+                            title={isReminded ? "Turn off reminder" : "Remind me 15m before start"}
+                            className={`flex items-center justify-center px-3.5 py-2.5 rounded-xl border transition-all duration-200 cursor-pointer hover:scale-[1.01] ${
+                                isReminded
+                                    ? "bg-indigo-500/20 text-indigo-400 border-indigo-500/40 shadow-sm shadow-indigo-500/20"
+                                    : "bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-slate-200 border-slate-700/60"
+                            }`}
+                        >
+                            {isReminded ? <BellRing size={18} className="text-indigo-400" /> : <Bell size={18} />}
+                        </button>
+                    )}
+                    <a href={getGoogleCalendarUrl(contest)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Add to Google Calendar"
+                        className="flex items-center justify-center px-3.5 py-2.5 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 rounded-xl transition-all duration-200 hover:scale-[1.01]"
+                    >
+                        <CalendarPlus size={18} />
+                    </a>
+                </div>
             </div>
         </div>
     )
