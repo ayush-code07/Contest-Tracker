@@ -55,10 +55,15 @@ function App() {
       return;
     }
 
+    if (Notification.permission === "denied") {
+      alert("Notifications are blocked for this site. To enable them:\n\n1. Click the lock/site-info icon in your browser's address bar\n2. Find 'Notifications' and change it to 'Allow'\n3. Then click the bell icon again");
+      return;
+    }
+
     if (Notification.permission !== "granted") {
       const res = await Notification.requestPermission();
       if (res !== "granted") {
-        alert("Please enable notification permissions in your browser to receive contest alerts.");
+        alert("Notification permission was not granted. Please allow notifications to receive contest alerts.");
         return;
       }
     }
@@ -113,8 +118,41 @@ function App() {
     return () => clearInterval(interval);
   }, [contests, reminders, notifiedContests]);
 
+  // Clean up expired reminders when contests are loaded or refreshed
+  useEffect(() => {
+    if (loading || contests.length === 0) return;
+
+    const validUpcomingIds = new Set(
+      contests
+        .filter((c) => c.status === "UPCOMING" && new Date(c.startTime).getTime() > Date.now())
+        .map((c) => c.id)
+    );
+
+    setReminders((prev) => {
+      const cleaned = prev.filter((id) => validUpcomingIds.has(id));
+      if (cleaned.length !== prev.length) {
+        localStorage.setItem("contest_reminders", JSON.stringify(cleaned));
+        return cleaned;
+      }
+      return prev;
+    });
+
+    setNotifiedContests((prev) => {
+      const cleaned = prev.filter((id) => validUpcomingIds.has(id));
+      if (cleaned.length !== prev.length) {
+        localStorage.setItem("notified_contests", JSON.stringify(cleaned));
+        return cleaned;
+      }
+      return prev;
+    });
+  }, [contests, loading]);
+
+  const activeRemindersCount = contests.filter(
+    (c) => c.status === "UPCOMING" && reminders.includes(c.id)
+  ).length;
+
   const filteredContests = contests.filter((c) => {
-    if (siteFilter === "REMINDERS") return reminders.includes(c.id);
+    if (siteFilter === "REMINDERS") return reminders.includes(c.id) && c.status === "UPCOMING";
     if (siteFilter === "ALL") return true;
     return c.site.toLowerCase() === siteFilter.toLowerCase();
   });
@@ -148,7 +186,7 @@ function App() {
                   : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/40"
                   }`}
               >
-                {site === "REMINDERS" ? `REMINDERS (${reminders.length})` : site}
+                {site === "REMINDERS" ? `REMINDERS (${activeRemindersCount})` : site}
               </button>
             ))}
           </div>
