@@ -44,7 +44,7 @@ export class ContestService {
 
         } catch (error) {
             console.error("Error Fetching Codeforces Contest: ", error);
-            throw error;
+            return [];
         }
     }
 

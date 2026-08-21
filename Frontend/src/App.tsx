@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { ContestCard } from './components/contestCard'
+import { NotificationModal, type NotificationModalType } from './components/NotificationModal'
 // when importing type, i should write type before interface in typescript
 import { Trophy, RefreshCw } from 'lucide-react'
 import type { Contest, APIResponse } from './types/contest'
@@ -11,6 +12,9 @@ function App() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [siteFilter, setSiteFilter] = useState<string>("ALL");
+  const [modalType, setModalType] = useState<NotificationModalType | null>(null);
+  const [pendingContest, setPendingContest] = useState<Contest | null>(null);
+
   const [reminders, setReminders] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem("contest_reminders");
@@ -49,32 +53,78 @@ function App() {
     fetchContests();
   }, []);
 
-  const toggleReminder = async (contest: Contest) => {
-    if (!("Notification" in window)) {
-      alert("Your browser does not support web notifications.");
-      return;
-    }
-
-    if (Notification.permission === "denied") {
-      alert("Notifications are blocked for this site. To enable them:\n\n1. Click the lock/site-info icon in your browser's address bar\n2. Find 'Notifications' and change it to 'Allow'\n3. Then click the bell icon again");
-      return;
-    }
-
-    if (Notification.permission !== "granted") {
-      const res = await Notification.requestPermission();
-      if (res !== "granted") {
-        alert("Notification permission was not granted. Please allow notifications to receive contest alerts.");
-        return;
-      }
-    }
-
+  const addReminderId = (contestId: string) => {
     setReminders((prev) => {
-      const updated = prev.includes(contest.id)
-        ? prev.filter((id) => id !== contest.id)
-        : [...prev, contest.id];
+      if (prev.includes(contestId)) return prev;
+      const updated = [...prev, contestId];
       localStorage.setItem("contest_reminders", JSON.stringify(updated));
       return updated;
     });
+  };
+
+  const removeReminderId = (contestId: string) => {
+    setReminders((prev) => {
+      const updated = prev.filter((id) => id !== contestId);
+      localStorage.setItem("contest_reminders", JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const toggleReminder = async (contest: Contest) => {
+    // If already reminded, user simply wants to turn it off
+    if (reminders.includes(contest.id)) {
+      removeReminderId(contest.id);
+      return;
+    }
+
+    // Check browser notification support
+    if (!("Notification" in window)) {
+      setModalType("unsupported");
+      return;
+    }
+
+    // If notifications are blocked
+    if (Notification.permission === "denied") {
+      setModalType("blocked");
+      return;
+    }
+
+    // If permission has not been asked yet, show soft pre-permission prompt
+    if (Notification.permission === "default") {
+      setPendingContest(contest);
+      setModalType("prompt");
+      return;
+    }
+
+    // If permission is already granted
+    if (Notification.permission === "granted") {
+      addReminderId(contest.id);
+    }
+  };
+
+  const handleConfirmPrompt = async () => {
+    if (!("Notification" in window)) return;
+
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission === "granted") {
+        if (pendingContest) {
+          addReminderId(pendingContest.id);
+        }
+        setModalType(null);
+        setPendingContest(null);
+      } else if (permission === "denied") {
+        setModalType("blocked");
+        setPendingContest(null);
+      } else {
+        // User closed or dismissed browser prompt
+        setModalType(null);
+        setPendingContest(null);
+      }
+    } catch {
+      setModalType(null);
+      setPendingContest(null);
+    }
   };
 
   // Background reminder checker (checks every 30s)
@@ -247,6 +297,16 @@ function App() {
             )}
           </>
         )}
+
+        {/* Notification Modal for soft permission & blocked guides */}
+        <NotificationModal
+          type={modalType}
+          onClose={() => {
+            setModalType(null);
+            setPendingContest(null);
+          }}
+          onConfirmPrompt={handleConfirmPrompt}
+        />
       </div>
     </div>
   )
