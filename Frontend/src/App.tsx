@@ -1,19 +1,28 @@
 import { useState, useEffect } from 'react'
 import { ContestCard } from './components/contestCard'
-import { NotificationModal, type NotificationModalType } from './components/NotificationModal'
 // when importing type, i should write type before interface in typescript
-import { Trophy, RefreshCw } from 'lucide-react'
+import { NotificationModal, type NotificationModalType } from './components/NotificationModal'
+
+import { Navbar } from './components/Navbar'
+import { AuthModal } from './components/AuthModal'
+import { useAuth } from './context/AuthContext'
+import { supabase } from './lib/supabase'
+import { RefreshCw } from 'lucide-react'
 import type { Contest, APIResponse } from './types/contest'
+
 // Vite access env variable using import.meta.env.VITE_VARNAME
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000"
 
 function App() {
+  const { user } = useAuth();
+
   const [contests, setContests] = useState<Contest[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [siteFilter, setSiteFilter] = useState<string>("ALL");
   const [modalType, setModalType] = useState<NotificationModalType | null>(null);
   const [pendingContest, setPendingContest] = useState<Contest | null>(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
 
   const [reminders, setReminders] = useState<string[]>(() => {
     try {
@@ -53,21 +62,85 @@ function App() {
     fetchContests();
   }, []);
 
-  const addReminderId = (contestId: string) => {
+  // Cloud Sync: When user logs in, fetch saved reminders from Supabase
+  useEffect(() => {
+    if(!user) return;
+
+    const syncCloudReminders = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("user_reminders")
+          .select("contest_id");
+
+        if(error) {
+          console.error("Error fetching cloud reminders:", error);
+          return;
+        }
+
+        const cloudContestIds: string[] = data ? data.map((row) => row.contest_id) : [];
+
+        // Merge cloud reminders with any existing local reminders
+        // prevLocal take the value of reminders from the previous render cycle, property of setReminders
+        setReminders((prevLocal) => {
+          const merged = Array.from(new Set([...prevLocal, ...cloudContestIds]));
+          localStorage.setItem("contest_reminders", JSON.stringify(merged));
+
+          // If there were local reminders not yet in cloud, upload them
+          const missingInCloud = prevLocal.filter((id) => !cloudContestIds.includes(id));
+          if(missingInCloud.length > 0){
+            const rowsToInsert = missingInCloud.map((contestId) => ({
+              user_id: user.id,
+              contest_id: contestId,
+            }));
+            supabase.from("user_reminders").insert(rowsToInsert).then(({error: insertErr }) =>  {
+              if(insertErr) console.error("Error syncing local reminders to cloud:", insertErr);
+            });
+          }
+          return merged;
+        });
+      } catch (err) {
+        console.error("Error in syncCloudReminders:", err);
+      }
+    };
+
+    syncCloudReminders();
+  }, [user]);
+
+  const addReminderId = async (contestId: string) => {
     setReminders((prev) => {
       if (prev.includes(contestId)) return prev;
       const updated = [...prev, contestId];
       localStorage.setItem("contest_reminders", JSON.stringify(updated));
       return updated;
     });
+
+    // If logged in, persist to Supabase PostgreSQL table
+    if (user) {
+      const { error } = await supabase
+        .from("user_reminders")
+        .insert({
+          user_id: user.id,
+          contest_id: contestId,
+        });
+      if(error) console.error("Error saving reminder to cloud:", error);
+    }
   };
 
-  const removeReminderId = (contestId: string) => {
+  const removeReminderId = async (contestId: string) => {
     setReminders((prev) => {
       const updated = prev.filter((id) => id !== contestId);
       localStorage.setItem("contest_reminders", JSON.stringify(updated));
       return updated;
     });
+
+    // If logged in, delete from Supabase PostgreSQL table
+    if (user) {
+      const { error } = await supabase
+        .from("user_reminders")
+        .delete()
+        .eq("contest_id", contestId);
+      if (error) console.error("Error removing reminder from cloud:", error);
+    }
   };
 
   const toggleReminder = async (contest: Contest) => {
@@ -109,7 +182,7 @@ function App() {
       const permission = await Notification.requestPermission();
       if (permission === "granted") {
         if (pendingContest) {
-          addReminderId(pendingContest.id);
+          await addReminderId(pendingContest.id);
         }
         setModalType(null);
         setPendingContest(null);
@@ -209,22 +282,13 @@ function App() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(99,102,241,0.15),rgba(255,255,255,0))] font-sans antialiased">
-      {/* Navbar */}
-      <nav className="w-full border-b border-slate-800/60 bg-slate-950/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className='inline-flex items-center justify-center p-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-indigo-400 shadow-inner'>
-              <Trophy size={22} />
-            </div>
-            <span className="text-xl font-extrabold tracking-tight bg-clip-text text-indigo-500/80">
-              Contest Tracker
-            </span>
-          </div>
-        </div>
-      </nav>
+      {/* Top Navbar */}
+      <Navbar
+        onOpenAuthModal={() => setIsAuthModalOpen(true)}
+        activeRemindersCount={activeRemindersCount}
+      />
 
       <div className="max-w-6xl mx-auto px-4 py-4">
-
         <div className='flex flex-col sm:flex-row gap-4 justify-between items-center mb-10 bg-slate-900/30 p-2 rounded-2xl border border-slate-800/50 backdrop-blur-md'>
           {/* Site & Reminder Filter Buttons */}
           <div className='flex flex-wrap gap-1'>
@@ -306,6 +370,12 @@ function App() {
             setPendingContest(null);
           }}
           onConfirmPrompt={handleConfirmPrompt}
+        />
+
+        {/* User Auth Modal */}
+        <AuthModal
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
         />
       </div>
     </div>
